@@ -1472,7 +1472,13 @@ int ecx_config_overlap_map_group(ecx_contextt *context, void *pIOmap, uint8 grou
       /* Move calculated inputs with OBytes offset*/
       for (slave = 1; slave <= *(context->slavecount); slave++)
       {
-         context->slavelist[slave].inputs += context->grouplist[group].Obytes;
+         if (!group || (group == context->slavelist[slave].group))
+         {
+            if(context->slavelist[slave].Ibits > 0)
+            {
+               context->slavelist[slave].inputs += context->grouplist[group].Obytes;
+            }
+         }
       }
 
       if (!group)
@@ -1597,6 +1603,10 @@ int ecx_reconfig_slave(ecx_contextt *context, uint16 slave, int timeout)
          {
             context->slavelist[slave].PO2SOconfig(slave);
          }
+         if (context->slavelist[slave].PO2SOconfigx) /* only if registered */
+         {
+            context->slavelist[slave].PO2SOconfigx(context, slave);
+         }         
          ecx_FPWRw(context->port, configadr, ECT_REG_ALCTL, htoes(EC_STATE_SAFE_OP) , timeout); /* set safeop status */
          state = ecx_statecheck(context, slave, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE); /* check state change safe-op */
          /* program configured FMMU */
