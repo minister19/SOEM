@@ -10,6 +10,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 
@@ -25,7 +26,7 @@ volatile int wkc;
 boolean inOP;
 uint8 currentgroup = 0;
 
-void simpletest(char *ifname)
+void simpletest(char *ifname, uint32 cycle_time)
 {
    int i, j, oloop, iloop, chk;
    needlf = FALSE;
@@ -108,7 +109,7 @@ void simpletest(char *ifname)
                   printf(" T:%" PRId64 "\r", ec_DCtime);
                   needlf = TRUE;
                }
-               osal_usleep(5000);
+               osal_usleep(cycle_time);
             }
             inOP = FALSE;
          }
@@ -221,17 +222,31 @@ OSAL_THREAD_FUNC ecatcheck(void *ptr)
    }
 }
 
+#define stack64k (64 * 1024)
+
 int main(int argc, char *argv[])
 {
    printf("SOEM (Simple Open EtherCAT Master)\nSimple test\n");
 
-   if (argc > 1)
+   if (argc >= 3)
+   {
+      uint32 cycle_time = atoi(argv[2]);
+
+      /* create thread to handle slave error handling in OP */
+      //      pthread_create( &thread1, NULL, (void *) &ecatcheck, (void*) &ctime);
+      osal_thread_create(&thread1, stack64k*4, &ecatcheck, NULL);
+
+      /* start cyclic part */
+      simpletest(argv[1], cycle_time);
+   }
+   else if (argc == 2)
    {
       /* create thread to handle slave error handling in OP */
       //      pthread_create( &thread1, NULL, (void *) &ecatcheck, (void*) &ctime);
-      osal_thread_create(&thread1, 128000, &ecatcheck, (void *)&ctime);
+      osal_thread_create(&thread1, stack64k*4, &ecatcheck, NULL);
+
       /* start cyclic part */
-      simpletest(argv[1]);
+      simpletest(argv[1], 5000);
    }
    else
    {
